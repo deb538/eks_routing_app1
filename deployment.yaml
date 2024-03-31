@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: project1
+  name: project1
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: project1
+  template:
+    metadata:
+      labels:
+        app: project1
+    spec:
+      containers:
+      - env:
+        image: deb538/eks_routing:app1
+        imagePullPolicy: Always
+        name: project1
+        ports:
+        - name: liveness-port
+          containerPort: 8083
+        resources: #CHANGE
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1024Mi #256Mi 
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: liveness-port
+          failureThreshold: 5
+          periodSeconds: 10
+          timeoutSeconds: 10
+          initialDelaySeconds: 60
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: liveness-port
+          failureThreshold: 5
+          periodSeconds: 10
+          timeoutSeconds: 10
+          initialDelaySeconds: 60
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels: #PODS
+    app: project1
+  name: project1
+  namespace: default
+spec:
+  ports:
+  - # nodePort: 30701 
+    port: 8083 
+    protocol: TCP
+    targetPort: 8083
+  selector:
+    app: project1
